@@ -69,6 +69,29 @@ Fluxo de uma jogada: o cliente envia `br.ufc.sysgame.move` com `{action, card, c
   (o administrador do homeserver consegue ler as mãos) e o registro é aberto, sem verificação — configuração só
   para demonstração em rede local.
 
+### Demonstração de jogadas concorrentes
+
+```bash
+docker compose run --rm --entrypoint python robos scripts/concorrencia.py
+```
+
+Cria uma partida com 3 jogadores e roda três cenários, mostrando a ordem das jogadas na timeline e a decisão do bot:
+
+1. **Mesmo jogador, duas jogadas sobre o mesmo estado** (dois dispositivos ou clique duplo): a primeira na
+   timeline é aceita; a segunda é rejeitada como desatualizada (`seq` antigo).
+2. **Os 3 jogadores jogam no mesmo instante:** só a jogada do jogador da vez é aceita.
+3. **Retransmissão com o mesmo ID de transação:** o homeserver deduplica (o `PUT /send/{txnId}` do Matrix é
+   idempotente) e devolve o mesmo `event_id`; o estado avança uma vez só.
+
+Exemplo de saída:
+
+```
+1) Mesmo jogador, duas jogadas sobre o mesmo estado (dois dispositivos / clique duplo)
+  ordem jogador     jogada          seq   resultado
+  1     conc2       jogar F6        4     ACEITA
+  2     conc2       comprar         4     rejeitada: jogada desatualizada (baseada no estado #4, atual #5); ...
+```
+
 ## Regras do jogo
 
 Baralho de 108 cartas em 4 cores — **F** Fogo, **A** Água, **T** Terra, **V** Vento — com números 0–9, **+2**,
