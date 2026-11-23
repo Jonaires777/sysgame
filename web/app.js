@@ -270,6 +270,8 @@ function renderGame() {
   banner.className = "banner" + (myTurn ? " myturn" : "");
   if (st.status === "lobby") banner.textContent = `Aguardando jogadores (${st.players.length}/8). Mínimo de 2 para começar.`;
   else if (st.status === "finished") banner.textContent = st.winner === me() ? "🏆 Você venceu!" : `🏆 ${short(st.winner)} venceu!`;
+  else if (myTurn && hand?.cards.length === 2 && !S.lastCard && !st.has_drawn)
+    banner.textContent = "Sua vez! Você tem 2 cartas: aperte 📢 Última carta! antes de jogar, senão compra 2.";
   else if (myTurn) banner.textContent = st.has_drawn ? "Sua vez: jogue a carta comprada ou passe." : "Sua vez!";
   else banner.textContent = `Vez de ${short(st.current)}`;
 
@@ -284,10 +286,15 @@ function renderGame() {
   } else if (st.status === "playing" && mine) {
     acts.push(el("button", { disabled: !myTurn || st.has_drawn, onclick: () => move("draw") }, "Comprar"));
     acts.push(el("button", { disabled: !myTurn || !st.has_drawn, onclick: () => move("pass") }, "Passar"));
-    const cb = el("input", { type: "checkbox", id: "last-card" });
-    cb.checked = S.lastCard || false;
-    cb.onchange = () => (S.lastCard = cb.checked);
-    acts.push(el("label", { class: "check" }, cb, "Última carta!"));
+    // "Última carta!": só aparece na sua vez, com 2 cartas na mão. Aperte antes de jogar a penúltima.
+    const twoCards = myTurn && hand?.cards.length === 2;
+    if (!twoCards) S.lastCard = false;
+    if (twoCards) {
+      acts.push(el("button", {
+        class: `lastcard ${S.lastCard ? "armed" : ""}`,
+        onclick: () => { S.lastCard = !S.lastCard; render(); },
+      }, S.lastCard ? "✓ Última carta avisada!" : "📢 Última carta!"));
+    }
   } else if (st.status === "finished") {
     acts.push(el("button", { class: "primary", onclick: () => { S.view = "lobby"; render(); } }, "Voltar às partidas"));
   }

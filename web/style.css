@@ -98,6 +98,10 @@ summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .players li .clock { margin-left: 6px; font-size: 12px; color: var(--accent); font-variant-numeric: tabular-nums; }
 .players li .clock.danger { color: var(--err); }
 
+button.lastcard { background: #4a1d22; border: 2px solid var(--F); color: #ffd5d5; font-weight: 800; font-size: 16px; padding: 10px 18px; animation: pulse 1.2s ease-in-out infinite; }
+button.lastcard.armed { background: var(--T); border-color: var(--T); color: #fff; animation: none; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 6px #e5484d44; } }
+
 label.check { display: flex; gap: 6px; align-items: center; color: var(--text); font-size: 14px; }
 
 .chat { display: flex; flex-direction: column; max-height: calc(100vh - 110px); }
