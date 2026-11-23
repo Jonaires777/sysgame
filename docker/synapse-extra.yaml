@@ -1,0 +1,36 @@
+
+# ---- Última Carta: acrescentado na primeira inicialização (ver docker-compose.yml) ----
+# Registro aberto, sem e-mail/captcha: jogadores criam a conta pelo próprio cliente web.
+# Só para a demonstração em rede local — não exponha este homeserver na internet assim.
+enable_registration: true
+enable_registration_without_verification: true
+suppress_key_server_warning: true
+
+# Limites de taxa mais folgados: o bot publica vários eventos por jogada.
+rc_message:
+  per_second: 50
+  burst_count: 200
+rc_registration:
+  per_second: 1
+  burst_count: 30
+rc_login:
+  address:
+    per_second: 5
+    burst_count: 50
+  account:
+    per_second: 5
+    burst_count: 50
+  failed_attempts:
+    per_second: 1
+    burst_count: 20
+rc_joins:
+  local:
+    per_second: 10
+    burst_count: 50
+rc_invites:
+  per_room:
+    per_second: 10
+    burst_count: 50
+  per_user:
+    per_second: 10
+    burst_count: 50

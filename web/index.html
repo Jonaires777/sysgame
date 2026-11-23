@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Última Carta</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Última <span>Carta</span></h1>
+    <div id="who" class="who"></div>
+  </header>
+
+  <!-- Login -->
+  <main id="view-login" class="view">
+    <form id="login-form" class="panel login">
+      <h2>Entrar no jogo</h2>
+      <p class="muted">Sua conta é uma conta Matrix neste homeserver. Não tem conta? Escolha um nome e uma senha e clique em <b>Criar conta</b>.</p>
+      <label>Nome de usuário <input id="lg-user" autocomplete="username" required pattern="[a-z0-9._=\-]+" title="letras minúsculas, números, . _ = -"></label>
+      <label>Senha <input id="lg-pass" type="password" autocomplete="current-password" required minlength="4"></label>
+      <details>
+        <summary>Servidor</summary>
+        <label>Homeserver <input id="lg-hs"></label>
+      </details>
+      <div class="row">
+        <button type="submit" class="primary" data-mode="login">Entrar</button>
+        <button type="submit" data-mode="register">Criar conta</button>
+      </div>
+      <p id="lg-err" class="err"></p>
+    </form>
+  </main>
+
+  <!-- Lobby -->
+  <main id="view-lobby" class="view hidden">
+    <section class="panel">
+      <div class="row between">
+        <h2>Partidas</h2>
+        <button id="btn-new" class="primary">+ Nova partida</button>
+      </div>
+      <p id="lobby-status" class="muted"></p>
+      <ul id="games" class="games"></ul>
+    </section>
+    <section class="panel rules">
+      <h2>Como jogar</h2>
+      <ul>
+        <li>Jogue uma carta da <b>mesma cor</b> ou do <b>mesmo valor</b> da carta da mesa.</li>
+        <li><b>⦸ Bloqueio</b>: o próximo perde a vez. <b>⇄ Inverte</b>: muda o sentido. <b>+2</b>: o próximo compra 2 e perde a vez.</li>
+        <li><b>★ Coringa</b>: você escolhe a cor. <b>+4</b>: escolhe a cor e o próximo compra 4.</li>
+        <li>Sem jogada? <b>Compre</b> uma carta: pode jogá-la, se servir, ou <b>passar</b>.</li>
+        <li>Ao ficar com uma carta, marque <b>Última carta!</b> antes de jogar, senão compra 2.</li>
+        <li>Quem esvaziar a mão primeiro vence.</li>
+      </ul>
+    </section>
+  </main>
+
+  <!-- Partida -->
+  <main id="view-game" class="view hidden">
+    <div class="game-grid">
+      <section class="table panel">
+        <div class="row between">
+          <button id="btn-back" class="ghost">← Partidas</button>
+          <h2 id="g-name"></h2>
+          <span id="g-seq" class="muted small"></span>
+        </div>
+        <ul id="g-players" class="players"></ul>
+        <div class="felt">
+          <div class="pile">
+            <div class="card back" id="g-draw" title="Comprar"><span>Última<br>Carta</span></div>
+            <small id="g-drawcount"></small>
+          </div>
+          <div class="pile">
+            <div id="g-top"></div>
+            <small id="g-color"></small>
+          </div>
+          <div id="g-dir" class="dir"></div>
+        </div>
+        <p id="g-banner" class="banner"></p>
+        <div id="g-actions" class="row center"></div>
+        <div id="g-hand" class="hand"></div>
+      </section>
+      <section class="chat panel">
+        <h3>Mesa e chat</h3>
+        <ol id="g-log" class="log"></ol>
+        <form id="chat-form" class="row">
+          <input id="chat-input" placeholder="Mensagem (ou !comando)" autocomplete="off">
+          <button>Enviar</button>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <dialog id="color-dialog">
+    <p>Escolha a cor</p>
+    <div class="row">
+      <button class="swatch F" value="F">Fogo</button>
+      <button class="swatch A" value="A">Água</button>
+      <button class="swatch T" value="T">Terra</button>
+      <button class="swatch V" value="V">Vento</button>
+    </div>
+    <button class="ghost" value="">Cancelar</button>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>

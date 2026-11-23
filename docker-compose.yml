@@ -1,0 +1,70 @@
+# Sistema completo com um comando:  docker compose up --build
+#   jogar (navegador):  http://localhost:8080   — de outra máquina da rede: http://<IP-desta-máquina>:8080
+#   homeserver Matrix:  http://localhost:8008   — também serve para entrar pelo Element ou outro cliente Matrix
+#   jogadores robôs:    docker compose run --rm robos
+#
+# As portas 8008 e 8080 são publicadas em todas as interfaces (0.0.0.0) para que jogadores de outras
+# máquinas da mesma rede possam entrar. Para restringir à própria máquina: BIND=127.0.0.1 no .env.
+
+x-app: &app
+  image: ultima-app
+  pull_policy: never
+  env_file:
+    - path: .env
+      required: false
+
+services:
+  synapse:
+    image: matrixdotorg/synapse:v1.165.0
+    environment:
+      SYNAPSE_SERVER_NAME: ${SERVER_NAME:-localhost}
+      SYNAPSE_REPORT_STATS: "no"
+    # Na primeira subida gera a configuração e acrescenta docker/synapse-extra.yaml (registro aberto, rate limits).
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ ! -f /data/homeserver.yaml ]; then
+          /start.py generate && cat /config/extra.yaml >> /data/homeserver.yaml
+        fi
+        exec /start.py
+    volumes:
+      - synapse-data:/data
+      - ./docker/synapse-extra.yaml:/config/extra.yaml:ro
+    ports:
+      - "${BIND:-0.0.0.0}:8008:8008"
+    restart: unless-stopped
+
+  bot:
+    <<: *app
+    build: .
+    command: python -m ultima.bot
+    environment:
+      HOMESERVER: http://synapse:8008
+      DATA_DIR: /data
+    volumes:
+      - bot-data:/data
+    depends_on:
+      synapse:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    <<: *app
+    command: python -m http.server 8080 --directory web
+    ports:
+      - "${BIND:-0.0.0.0}:8080:8080"
+    depends_on:
+      - bot
+
+  robos:
+    <<: *app
+    profiles: ["robos"]   # não sobe no "up"; use: docker compose run --rm robos [opções do simulador]
+    entrypoint: ["python", "scripts/simular.py"]
+    environment:
+      HOMESERVER: http://synapse:8008
+    depends_on:
+      - bot
+
+volumes:
+  synapse-data:
+  bot-data:
