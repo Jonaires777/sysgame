@@ -3,11 +3,12 @@
 #   homeserver Matrix:  http://localhost:8008   — também serve para entrar pelo Element ou outro cliente Matrix
 #   jogadores robôs:    docker compose run --rm robos
 #
+# Monorepo: apps/server (bot árbitro, Python) · apps/web (cliente React) · infra (configuração do Synapse)
 # As portas 8008 e 8080 são publicadas em todas as interfaces (0.0.0.0) para que jogadores de outras
 # máquinas da mesma rede possam entrar. Para restringir à própria máquina: BIND=127.0.0.1 no .env.
 
-x-app: &app
-  image: ultima-app
+x-server: &server
+  image: ultima-server
   pull_policy: never
   env_file:
     - path: .env
@@ -19,7 +20,7 @@ services:
     environment:
       SYNAPSE_SERVER_NAME: ${SERVER_NAME:-localhost}
       SYNAPSE_REPORT_STATS: "no"
-    # Na primeira subida gera a configuração e acrescenta docker/synapse-extra.yaml (registro aberto, rate limits).
+    # Na primeira subida gera a configuração e acrescenta infra/synapse-extra.yaml (registro aberto, rate limits).
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -29,15 +30,15 @@ services:
         exec /start.py
     volumes:
       - synapse-data:/data
-      - ./docker/synapse-extra.yaml:/config/extra.yaml:ro
+      - ./infra/synapse-extra.yaml:/config/extra.yaml:ro
     ports:
       - "${BIND:-0.0.0.0}:8008:8008"
     restart: unless-stopped
 
   bot:
-    <<: *app
-    build: .
-    command: python -m ultima.bot
+    <<: *server
+    build: apps/server
+    command: python -m ultima
     environment:
       HOMESERVER: http://synapse:8008
       DATA_DIR: /data
@@ -51,15 +52,16 @@ services:
     restart: unless-stopped
 
   web:
-    <<: *app
-    command: python -m http.server 8080 --directory web
+    image: ultima-web
+    build: apps/web
     ports:
       - "${BIND:-0.0.0.0}:8080:8080"
     depends_on:
       - bot
+    restart: unless-stopped
 
   robos:
-    <<: *app
+    <<: *server
     profiles: ["robos"]   # não sobe no "up"; use: docker compose run --rm robos [opções do simulador]
     entrypoint: ["python", "scripts/simular.py"]
     environment:

@@ -33,10 +33,11 @@ Abra **http://localhost:8080**, crie uma conta (nome + senha), clique em **Nova 
 | Componente | O que faz |
 |---|---|
 | **Synapse** (homeserver) | Guarda e distribui os eventos das salas; contas dos jogadores |
-| **Bot árbitro** (`ultima/bot.py`) | Única autoridade: baralho, mãos, validação das jogadas, estado público |
-| **Motor de regras** (`ultima/engine.py`) | Regras do jogo em Python puro, sem Matrix (testado com pytest) |
-| **Cliente web** (`web/`) | HTML/JS sem dependências, fala direto com o homeserver |
-| **Simulador** (`scripts/simular.py`, `ultima/player.py`) | Jogadores automáticos para teste de ponta a ponta e demo |
+| **Bot árbitro** (`apps/server`) | Única autoridade: baralho, mãos, validação das jogadas, estado público. Arquitetura hexagonal: domínio → casos de uso → adaptadores Matrix e JSON |
+| **Cliente web** (`apps/web`) | React + Vite + Tailwind + Motion; fala direto com o homeserver |
+| **Simulador** (`apps/server/scripts`) | Jogadores automáticos e demos de concorrência e de queda do bot |
+
+Detalhes das camadas, do protocolo e dos conceitos em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
 
 ### Salas e eventos
 
@@ -95,7 +96,7 @@ Exemplo de saída:
 ### Demonstração de queda do bot (tolerância a falhas)
 
 ```bash
-python scripts/queda_bot.py      # na máquina hospedeira, com o sistema rodando (usa o comando docker)
+python apps/server/scripts/queda_bot.py   # na máquina hospedeira, com o sistema rodando (usa o comando docker)
 ```
 
 Cria uma partida, mata o bot com `docker compose kill bot` (SIGKILL), faz o jogador da vez jogar com o bot fora,
@@ -152,36 +153,43 @@ Tudo é opcional; copie `.env.example` para `.env` para mudar.
 | `BIND` | `0.0.0.0` | Interface das portas 8008/8080; `127.0.0.1` restringe à própria máquina |
 
 **Limites de taxa do Synapse:** o padrão do Synapse permite criar só ~1 sala por minuto por usuário, e o bot cria
-uma sala por partida e uma sala privada por jogador. Por isso `docker/synapse-extra.yaml` aumenta os limites. Esse
+uma sala por partida e uma sala privada por jogador. Por isso `infra/synapse-extra.yaml` aumenta os limites. Esse
 arquivo só é aplicado quando o volume do Synapse é criado; se o volume é de uma versão anterior deste repositório,
 recrie com `docker compose down -v && docker compose up --build` (apaga contas e partidas).
 
-## Desenvolvimento (sem Docker para o código Python)
+## Desenvolvimento (sem Docker para o código)
 
-Requisito: Python 3.11+. O homeserver continua vindo do Docker (`docker compose up synapse`).
+O homeserver continua vindo do Docker: `docker compose up -d synapse`.
+
+**Servidor** (Python 3.11+):
 
 ```bash
+cd apps/server
 python -m venv .venv
 source .venv/Scripts/activate      # Windows (Git Bash); no Linux/macOS: source .venv/bin/activate
 pip install -r requirements.txt
 
-pytest -q                          # testes do motor e do protocolo
-HOMESERVER=http://localhost:8008 python -m ultima.bot
-python -m http.server 8080 --directory web
+pytest -q                          # domínio, protocolo e casos de uso (com adaptadores falsos)
+HOMESERVER=http://localhost:8008 python -m ultima
 HOMESERVER=http://localhost:8008 python scripts/simular.py
 ```
 
-## Estrutura
+**Cliente web** (Node.js 20+): ver [`apps/web/README.md`](apps/web/README.md).
+
+## Estrutura (monorepo)
 
 ```
-ultima/cards.py      cartas e baralho
-ultima/engine.py     regras do jogo (puro, testável)
-ultima/protocol.py   tipos de evento e comandos
-ultima/store.py      persistência do bot (JSON com escrita atômica)
-ultima/bot.py        bot árbitro (matrix-nio)
-ultima/player.py     cliente de jogador em Python (usado pelo simulador)
-web/                 cliente web (HTML/CSS/JS)
-scripts/simular.py   jogadores automáticos
-docker/              configuração extra do Synapse
-tests/               pytest
+apps/server/                  bot árbitro (Python)
+  ultima/domain/              regras do jogo: cards.py, engine.py (puro, sem I/O)
+  ultima/application/         casos de uso (service.py) e portas (ports.py)
+  ultima/adapters/            Matrix (matrix_bot.py: entrada e saída) e persistência (json_store.py)
+  ultima/client/              cliente de jogador em Python (simulador e demos)
+  ultima/protocol.py          contrato: tipos de evento e comandos de texto
+  ultima/__main__.py          composition root: liga as camadas e roda o bot
+  tests/                      pytest
+  scripts/                    simular.py, concorrencia.py, queda_bot.py
+apps/web/                     cliente web (React + Vite + Tailwind + Motion)
+infra/synapse-extra.yaml      configuração extra do Synapse
+docs/                         proposta e arquitetura
+docker-compose.yml            sobe tudo
 ```
