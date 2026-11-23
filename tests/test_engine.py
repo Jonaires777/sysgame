@@ -190,3 +190,20 @@ def test_serialization_roundtrip():
     g2 = Game.from_dict(g.to_dict())
     assert g2.public_state() == g.public_state()
     assert g2.hands == g.hands
+
+
+def _floats(x):
+    if isinstance(x, float):
+        return True
+    if isinstance(x, dict):
+        return any(_floats(v) for v in x.values())
+    if isinstance(x, list):
+        return any(_floats(v) for v in x)
+    return False
+
+
+def test_public_state_has_no_floats():
+    # o Matrix recusa eventos com números de ponto flutuante (M_BAD_JSON)
+    g = make()
+    g.timeout()
+    assert not _floats(g.public_state())

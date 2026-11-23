@@ -13,7 +13,7 @@ import os
 import time
 
 from nio import (AsyncClient, AsyncClientConfig, InviteMemberEvent, JoinError, LoginResponse, MatrixRoom,
-                 RoomCreateError, RoomMemberEvent, RoomMessageText, RoomPreset, RoomResolveAliasResponse,
+                 RoomCreateError, RoomMemberEvent, RoomMessageText, RoomPreset, RoomPutStateError, RoomResolveAliasResponse,
                  RoomVisibility, SyncResponse, UnknownEvent)
 
 from . import cards as C
@@ -102,6 +102,9 @@ class Bot:
         for g in self.store.games.values():
             g.turn_started_at = time.time()  # o relógio do turno recomeça depois de uma queda
         await self.ensure_lobby()
+        for g in self.store.games.values():
+            if g.status == "playing":
+                await self.publish_state(g)  # o prazo da vez mudou: avisa os clientes
         self.client.add_event_callback(self.on_invite, InviteMemberEvent)
         self.client.add_event_callback(self.on_text, RoomMessageText)
         self.client.add_event_callback(self.on_custom, UnknownEvent)
@@ -190,9 +193,20 @@ class Bot:
             g.pass_turn(sender)
         await self.after_change(g, before, event_id, sender)
 
+    async def publish_state(self, g: Game) -> None:
+        state = g.public_state()
+        # prazo da vez atual (relógio do bot, em ms desde a época), para os clientes mostrarem o timer
+        # (o Matrix só aceita inteiros nos eventos: números com casa decimal são recusados com M_BAD_JSON)
+        state["turn_timeout"] = int(TURN_TIMEOUT) if TURN_TIMEOUT > 0 else None
+        state["turn_deadline"] = (int((g.turn_started_at + TURN_TIMEOUT) * 1000)
+                                  if g.status == "playing" and TURN_TIMEOUT > 0 else None)
+        resp = await self.client.room_put_state(g.game_id, P.STATE, state)
+        if isinstance(resp, RoomPutStateError):
+            log.error("estado da partida %s recusado pelo homeserver: %s", g.game_id, resp.message)
+
     async def after_change(self, g: Game, before: dict, event_id: str | None, sender: str | None) -> None:
         self.store.save()
-        await self.client.room_put_state(g.game_id, P.STATE, g.public_state())
+        await self.publish_state(g)
         if event_id:
             await self.client.room_send(g.game_id, P.RESULT, {
                 "in_reply_to": event_id, "sender": sender, "ok": True, "seq": g.seq})

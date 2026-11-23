@@ -253,7 +253,9 @@ function renderGame() {
   $("g-players").replaceChildren(...st.players.map((p) => el("li", {
     class: [p === st.current && "turn", p === me() && "me"].filter(Boolean).join(" "),
   }, short(p), el("span", { class: "count" }, st.status === "lobby" ? "" : `🂠 ${st.hand_counts[p]}`),
-    st.hand_counts[p] === 1 && st.status === "playing" ? el("span", { class: "last" }, "!") : null)));
+    st.hand_counts[p] === 1 && st.status === "playing" ? el("span", { class: "last" }, "!") : null,
+    p === st.current && st.turn_deadline ? el("span", { class: "clock", id: "g-clock" }) : null)));
+  tickTimer();
 
   $("g-top").replaceChildren(st.top_card ? cardEl(st.top_card, { big: true, chosen: st.color })
     : el("div", { class: "card big back" }, el("span", {}, "?")));
@@ -308,6 +310,30 @@ function renderGame() {
     m.notice ? m.body : [el("b", {}, short(m.sender) + ": "), m.body])));
   if (atBottom) log.scrollTop = log.scrollHeight;
 }
+
+// Contagem regressiva da vez. O prazo vem do bot (turn_deadline, em ms); atualiza só o timer, sem redesenhar a tela.
+function tickTimer() {
+  const st = S.view === "game" && gameState(S.gameId);
+  const box = $("g-timer");
+  if (!st || st.status !== "playing" || !st.turn_deadline || !st.turn_timeout) {
+    box.classList.add("hidden");
+    return;
+  }
+  const total = st.turn_timeout;
+  const left = Math.max(0, Math.min(total, (st.turn_deadline - Date.now()) / 1000));
+  const secs = Math.ceil(left);
+  const level = left <= 10 ? "danger" : left <= total / 3 ? "warn" : "";
+  box.className = `timer ${level}`;
+  box.querySelector(".bar").style.width = `${(left / total) * 100}%`;
+  const who = st.current === me() ? "Seu tempo" : `Tempo de ${short(st.current)}`;
+  box.querySelector(".secs").textContent = left > 0 ? `${who}: ${secs}s` : `${who}: esgotado`;
+  const clock = $("g-clock");
+  if (clock) {
+    clock.textContent = `⏱ ${secs}s`;
+    clock.className = `clock ${left <= 10 ? "danger" : ""}`;
+  }
+}
+setInterval(tickTimer, 250);
 
 async function playCard(card, handSize) {
   let color = null;
