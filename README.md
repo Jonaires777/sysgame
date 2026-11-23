@@ -92,6 +92,32 @@ Exemplo de saída:
   2     conc2       comprar         4     rejeitada: jogada desatualizada (baseada no estado #4, atual #5); ...
 ```
 
+### Demonstração de queda do bot (tolerância a falhas)
+
+```bash
+python scripts/queda_bot.py      # na máquina hospedeira, com o sistema rodando (usa o comando docker)
+```
+
+Cria uma partida, mata o bot com `docker compose kill bot` (SIGKILL), faz o jogador da vez jogar com o bot fora,
+mostra que o estado não muda e religa o bot. Saída obtida:
+
+```
+2) Matando o bot árbitro (SIGKILL)
+3) Com o bot fora, queda1 envia 'jogar C' (baseada no estado #3)
+   4 s depois o estado continua #3 — ninguém validou a jogada ainda
+4) Religando o bot
+   Em 4.9 s o bot voltou e aplicou a jogada pendente: estado #4
+   Aplicada exatamente uma vez? SIM (esperado #4)
+```
+
+### Timeout de turno na demonstração
+
+O padrão é 90 s por jogada. Para mostrar o timeout ao vivo sem esperar:
+
+```bash
+TURN_TIMEOUT=10 MAX_TIMEOUTS=2 docker compose up -d bot
+```
+
 ## Regras do jogo
 
 Baralho de 108 cartas em 4 cores — **F** Fogo, **A** Água, **T** Terra, **V** Vento — com números 0–9, **+2**,
@@ -124,6 +150,11 @@ Tudo é opcional; copie `.env.example` para `.env` para mudar.
 | `TURN_TIMEOUT` | `90` | Segundos por jogada; `0` desliga |
 | `MAX_TIMEOUTS` | `3` | Timeouts seguidos até remover o jogador |
 | `BIND` | `0.0.0.0` | Interface das portas 8008/8080; `127.0.0.1` restringe à própria máquina |
+
+**Limites de taxa do Synapse:** o padrão do Synapse permite criar só ~1 sala por minuto por usuário, e o bot cria
+uma sala por partida e uma sala privada por jogador. Por isso `docker/synapse-extra.yaml` aumenta os limites. Esse
+arquivo só é aplicado quando o volume do Synapse é criado; se o volume é de uma versão anterior deste repositório,
+recrie com `docker compose down -v && docker compose up --build` (apaga contas e partidas).
 
 ## Desenvolvimento (sem Docker para o código Python)
 

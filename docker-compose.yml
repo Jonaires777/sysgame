@@ -41,6 +41,8 @@ services:
     environment:
       HOMESERVER: http://synapse:8008
       DATA_DIR: /data
+      TURN_TIMEOUT: ${TURN_TIMEOUT:-90}
+      MAX_TIMEOUTS: ${MAX_TIMEOUTS:-3}
     volumes:
       - bot-data:/data
     depends_on:

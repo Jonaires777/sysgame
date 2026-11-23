@@ -34,3 +34,10 @@ rc_invites:
   per_user:
     per_second: 10
     burst_count: 50
+  per_issuer:
+    per_second: 10
+    burst_count: 50
+# O bot cria uma sala por partida e uma sala privada por jogador; o padrão (~1 por minuto) trava o jogo.
+rc_room_creation:
+  per_second: 10
+  burst_count: 50
